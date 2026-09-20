@@ -34,7 +34,7 @@ public:
     void attachWAL();
 
     /// Minimum WAL entry count before flush proceeds (unless forced).
-    static constexpr uint64_t kCompactThreshold = 100;
+    static constexpr uint64_t kCompactThreshold = 50000;
 
     /// Incremental flush: write only dirty pages, swap WAL.
     void flush(uint64_t lastEventId, bool force = false);
@@ -64,10 +64,10 @@ public:
     const std::string& walPath() const { return walPath_; }
 
     // Adaptive interval constants
-    static constexpr double kBaseIntervalSec = 300.0;
-    static constexpr double kMinIntervalSec  = 30.0;
-    static constexpr double kMaxIntervalSec  = 600.0;
-    static constexpr size_t kWALSizeFlushThreshold = 2 * 1024 * 1024; // 2MB
+    static constexpr double kBaseIntervalSec = 1800.0; // 30 mins
+    static constexpr double kMinIntervalSec  = 300.0;  // 5 mins floor
+    static constexpr double kMaxIntervalSec  = 3600.0; // 1 hour ceiling
+    static constexpr size_t kWALSizeFlushThreshold = 16 * 1024 * 1024; // 16MB
     static constexpr double kTombstoneCompactRatio = 0.25;
     static constexpr double kDeadSpaceRewriteRatio = 0.5;
 

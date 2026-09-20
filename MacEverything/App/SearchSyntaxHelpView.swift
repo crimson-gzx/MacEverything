@@ -147,7 +147,9 @@ struct SearchSyntaxHelpView: View {
             SyntaxRow("/abc/def/", "abc 下名为 def 的目录")
             SyntaxRow("/abc/def/*", "列出 abc 下 def 目录的子项")
             SyntaxRow("/abc/*/def", "非相邻路径段：abc 和 def 中间可有其它目录")
-            SyntaxNote("路径段会从右往左匹配")
+            SyntaxRow("/Users/me/My Folder/file.md", "可直接粘贴包含空格的完整路径")
+            SyntaxRow("/path/file.swift:42:7", "自动忽略编辑器的行号和列号后缀")
+            SyntaxNote("路径段会从右往左匹配；粘贴完整路径时不需要手动加引号")
         }
     }
 

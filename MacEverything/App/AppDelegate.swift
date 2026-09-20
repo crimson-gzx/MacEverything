@@ -15,10 +15,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         // Delay by one frame to let SwiftUI create the window
         DispatchQueue.main.async { [weak self] in
-            self?.mainSearchWindow = NSApp.windows.first { $0.title == "MacEverything" }
+            let window = self?.resolveMainSearchWindow()
             if shouldMinimize {
-                self?.mainSearchWindow?.orderOut(nil)
-                NSApp.hide(nil)
+                window?.orderOut(nil)
             }
         }
         hotkeyManager = HotkeyManager()
@@ -90,7 +89,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         if let item = menu.items.first {
-            let isVisible = mainSearchWindow?.isVisible ?? false
+            let isVisible = !NSApp.isHidden && (resolveMainSearchWindow()?.isVisible ?? false)
             item.title = isVisible ? "隐藏 MacEverything" : "显示 MacEverything"
         }
         launchAtLoginItem?.state = SMAppService.mainApp.status == .enabled ? .on : .off
@@ -102,33 +101,56 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Menu Actions
 
     @objc private func toggleWindow() {
-        if let window = mainSearchWindow, window.isVisible {
-            NSApp.hide(nil)
+        if !NSApp.isHidden, let window = resolveMainSearchWindow(), window.isVisible {
+            window.orderOut(nil)
         } else {
-            NSApp.activate(ignoringOtherApps: true)
-            mainSearchWindow?.makeKeyAndOrderFront(nil)
+            showMainWindow()
         }
     }
 
     @objc private func rebuildIndex() {
-        NSApp.activate(ignoringOtherApps: true)
-        mainSearchWindow?.makeKeyAndOrderFront(nil)
+        showMainWindow()
         NotificationCenter.default.post(name: .rebuildIndex, object: nil)
     }
 
     @objc private func openShortcutSettings() {
+        NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps: true)
         ShortcutSettingsWindowController.shared.showWindow()
     }
 
     @objc private func openContentSettings() {
+        NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps: true)
         ContentSettingsWindowController.shared.showWindow()
     }
 
     @objc private func openSearchSyntaxHelp() {
+        NSApp.unhide(nil)
         NSApp.activate(ignoringOtherApps: true)
         SearchSyntaxHelpWindowController.shared.showWindow()
+    }
+
+    private func showMainWindow(attemptsRemaining: Int = 50) {
+        NSApp.unhide(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        if let window = resolveMainSearchWindow() {
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+        } else if attemptsRemaining > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                self?.showMainWindow(attemptsRemaining: attemptsRemaining - 1)
+            }
+        }
+    }
+
+    private func resolveMainSearchWindow() -> NSWindow? {
+        if let window = mainSearchWindow {
+            return window
+        }
+        let window = NSApp.windows.first { $0.title == "MacEverything" }
+        mainSearchWindow = window
+        return window
     }
 
     @objc private func toggleMCPClient(_ sender: NSMenuItem) {
