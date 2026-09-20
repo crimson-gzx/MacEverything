@@ -104,9 +104,20 @@ void ServiceEngine::startMonitoring() {
         exclusions.push_back(homeStr + "/Library/Biome");
         exclusions.push_back(homeStr + "/Library/Logs");
     }
-    exclusions.push_back("/private/var/folders");
     exclusions.push_back("/private/var/db");
     exclusions.push_back("/private/var/log");
+
+    // If scanning a specific subtree (e.g. unit tests running in a temp directory),
+    // do not exclude any path overlapping scanRoot.
+    if (root != "/") {
+        exclusions.erase(
+            std::remove_if(exclusions.begin(), exclusions.end(), [&](const std::string& ep) {
+                return root.size() >= ep.size() ? (root.compare(0, ep.size(), ep) == 0)
+                                                : (ep.compare(0, root.size(), root) == 0);
+            }),
+            exclusions.end()
+        );
+    }
 
     watcher_->setExclusionPaths(exclusions);
 
