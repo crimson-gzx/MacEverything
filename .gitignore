@@ -1,0 +1,33 @@
+# Build artifacts
+build/
+test_all
+/benchmark
+maceverything-daemon
+*.o
+*.dmg
+
+# Xcode
+*.xcuserdata
+DerivedData/
+
+# Index cache
+*.bin
+*.wal
+
+# macOS
+.DS_Store
+test_all_master
+.claude/string_search_bench
+.claude/worktrees/
+
+# Compiled binaries
+mac_scanner
+string_search_bench
+test_runner
+
+# Claude Code config (personal dev tooling)
+CLAUDE.md
+.claude/
+
+# Internal dev docs
+docs/superpowers/

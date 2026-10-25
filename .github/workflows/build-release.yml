@@ -1,0 +1,70 @@
+name: Build and Release DMG
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew update --preinstall || true
+          brew install re2 abseil
+
+      - name: Run fast unit tests
+        run: |
+          make test-fast
+
+      - name: Build MacEverything App
+        run: |
+          xcodebuild -project MacEverything.xcodeproj -scheme MacEverything \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            build SYMROOT=build
+
+      - name: Ad-hoc code sign
+        run: |
+          codesign --force --deep --sign - build/Release/MacEverything.app
+
+      - name: Package into DMG
+        run: |
+          -hdiutil detach /Volumes/MacEverything 2>/dev/null || true
+          hdiutil create -volname "MacEverything" \
+            -srcfolder build/Release/MacEverything.app \
+            -ov -format UDZO MacEverything.dmg
+
+      - name: Upload DMG as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MacEverything-DMG
+          path: MacEverything.dmg
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MacEverything.dmg
+          name: "MacEverything ${{ github.ref_name }}"
+          body: |
+            ### MacEverything ${{ github.ref_name }}
+
+            macOS 极速文件搜索：数百万文件毫秒级定位，索引映射加载、常驻内存约 40 MB，日均写盘 < 150 MB。
+
+            #### 安装说明：
+            1. 下载 `MacEverything.dmg` 并拖入「应用程序」文件夹。
+            2. 首次启动若提示“无法打开，因为无法验证开发者”，请在 **系统设置 -> 隐私与安全性** 中点击 **“仍要打开”**。
+            3. 授予 **完全磁盘访问权限**（Full Disk Access）以建立全局极速索引。
+          draft: false
+          prerelease: false
