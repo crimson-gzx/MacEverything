@@ -413,7 +413,13 @@ class SearchViewModel: ObservableObject {
                 historyStore.recordQuery(text)
             }
         }
-        if refreshThrottle.focusChanged(focused) {
+    }
+
+    /// Index refreshes run only while the search window is on screen. Hiding the
+    /// window (hotkey or menu) orders it out without deactivating the app, so app
+    /// activation cannot tell whether anyone sees the results.
+    func onWindowVisibilityChanged(_ visible: Bool) {
+        if refreshThrottle.focusChanged(visible) {
             performIndexRefresh()
             scheduleCooldown()
         }
@@ -437,8 +443,8 @@ class SearchViewModel: ObservableObject {
         isSyncing = bridge.isSyncing
         contentIndexedCount = bridge.contentIndexedFileCount()
 
-        // Skip expensive search/query when app is not focused.
-        // Results will refresh on focus regain via onWindowFocusChanged.
+        // Skip expensive search/query while the window is hidden.
+        // Results will refresh when it is shown again via onWindowVisibilityChanged.
         guard refreshThrottle.isFocused else { return }
 
         if !searchText.isEmpty && !isContentSearch {

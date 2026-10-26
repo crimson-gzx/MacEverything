@@ -4,6 +4,9 @@ struct ContentView: View {
     @StateObject private var viewModel = SearchViewModel()
     @ObservedObject private var searchOptions = SearchOptions.shared
     @State private var scrollViewID = 0
+    /// The results list is torn down while the window is hidden: a LazyVStack
+    /// keeps every row it has built, and those otherwise pile up across refreshes.
+    @State private var windowVisible = true
     @FocusState private var isSearchFieldFocused: Bool
 
     var body: some View {
@@ -115,7 +118,9 @@ struct ContentView: View {
             Divider()
 
             // Results list
-            if viewModel.isScanning {
+            if !windowVisible {
+                Spacer()
+            } else if viewModel.isScanning {
                 VStack(spacing: 12) {
                     Spacer()
                     ProgressView()
@@ -276,6 +281,14 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didDeminiaturizeNotification)) { _ in
             scrollViewID += 1
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didChangeOcclusionStateNotification)) { note in
+            guard let window = note.object as? NSWindow, window.title == "MacEverything" else { return }
+            // Covered by other windows: only pause refreshes. Ordered out or
+            // minimized: also drop the list (it is rebuilt when shown again).
+            let shown = window.isVisible && !window.isMiniaturized && !NSApp.isHidden
+            if shown != windowVisible { windowVisible = shown }
+            viewModel.onWindowVisibilityChanged(shown && window.occlusionState.contains(.visible))
         }
     }
 }
